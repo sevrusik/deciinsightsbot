@@ -1,0 +1,14 @@
+# Telegram Bot Framework
+aiogram==3.4.1
+
+# Environment Variables
+python-dotenv==1.0.1
+
+# OpenAI API
+openai>=2.6.0
+
+# Database
+SQLAlchemy==2.0.25
+
+# Async support
+aiofiles==23.2.1

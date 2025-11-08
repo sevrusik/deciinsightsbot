@@ -207,6 +207,19 @@ _Или используйте /cancel чтобы отменить_"""
     await message.answer(text, parse_mode="Markdown")
 
 
+@router.message(Command("cancel"))
+async def cmd_cancel(message: Message, state: FSMContext):
+    """Команда /cancel - отмена"""
+    current_state = await state.get_state()
+
+    if current_state is None:
+        await message.answer("Нечего отменять. Используйте /throw чтобы начать")
+        return
+
+    await state.clear()
+    await message.answer("✅ Действие отменено. Используйте /throw чтобы начать заново")
+
+
 @router.message(ThrowState.waiting_situation)
 async def process_situation(message: Message, state: FSMContext):
     """Обработка описания ситуации"""
@@ -377,17 +390,6 @@ async def process_path_choice(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
 
 
-@router.message(Command("cancel"))
-async def cmd_cancel(message: Message, state: FSMContext):
-    """Команда /cancel - отмена"""
-    current_state = await state.get_state()
-
-    if current_state is None:
-        await message.answer("Нечего отменять. Используйте /throw чтобы начать")
-        return
-
-    await state.clear()
-    await message.answer("✅ Действие отменено. Используйте /throw чтобы начать заново")
 
 
 # ============================================

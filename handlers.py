@@ -11,9 +11,10 @@ from aiogram.fsm.state import State, StatesGroup
 import logging
 import random
 
+from config import ADMIN_IDS
 from database import (
     get_or_create_user, update_last_interaction,
-    save_throw, update_throw, get_user_throws, get_stats
+    save_throw, update_throw, get_user_throws, get_stats, get_detailed_analytics
 )
 from dice_meanings import (
     get_all_symbols, get_symbol_info, format_symbol_info,
@@ -174,10 +175,66 @@ async def cmd_stats(message: Message):
 
     text = f"""📊 **Статистика бота:**
 
-👥 Пользователей: {stats['users']}
+👥 Всего пользователей: {stats['users']}
+🔥 Активных за неделю: {stats['active_users_7d']}
 🎲 Всего бросков: {stats['throws']}
+✅ Завершённых: {stats['completed_throws']}
+
+📈 Метрики:
+• Среднее бросков/пользователь: {stats['avg_throws_per_user']}
+• Процент завершения: {stats['completion_rate']}%
 
 _Dice of Isight помогает людям видеть по-новому_ ✨"""
+
+    await message.answer(text, parse_mode="Markdown")
+
+
+@router.message(Command("analytics"))
+async def cmd_analytics(message: Message):
+    """Команда /analytics - детальная аналитика (только для админа)"""
+    if str(message.from_user.id) not in ADMIN_IDS:
+        await message.answer("⛔ Эта команда доступна только администратору")
+        return
+
+    stats = get_stats()
+    analytics = get_detailed_analytics()
+
+    # Форматируем пути
+    path_text = ""
+    path_names = {
+        "change": "🔄 Перемен",
+        "stay": "🛡️ Стабильности",
+        "patience": "🌱 Терпения",
+        "explore": "🧭 Исследования"
+    }
+
+    for path_key, count in stats['path_distribution'].items():
+        path_name = path_names.get(path_key, path_key)
+        percentage = (count / stats['completed_throws'] * 100) if stats['completed_throws'] > 0 else 0
+        path_text += f"  {path_name}: {count} ({percentage:.1f}%)\n"
+
+    text = f"""📊 **Детальная аналитика**
+
+**Общие показатели:**
+👥 Всего пользователей: {stats['users']}
+🔥 Активных (7 дней): {stats['active_users_7d']}
+🔁 Вернувшихся: {analytics['returning_users']}
+💚 Retention rate: {analytics['retention_rate']}%
+
+**Броски:**
+🎲 Всего: {stats['throws']}
+✅ Завершено: {stats['completed_throws']}
+📈 Конверсия: {stats['completion_rate']}%
+📊 Среднее/юзер: {stats['avg_throws_per_user']}
+
+**Популярные пути:**
+{path_text if path_text else "  Нет данных"}
+
+**Рост за 30 дней:**
+• Новых юзеров: {sum(item['count'] for item in analytics['users_by_day'])}
+• Бросков: {sum(item['count'] for item in analytics['throws_by_day'])}
+
+_Используйте эти данные для улучшения продукта_ 💡"""
 
     await message.answer(text, parse_mode="Markdown")
 

@@ -256,12 +256,97 @@ def get_stats() -> dict:
     """Получить статистику бота"""
     db = get_db()
     try:
+        from sqlalchemy import func
+        from datetime import timedelta
+
         users_count = db.query(User).count()
         throws_count = db.query(DiceThrow).count()
 
+        # Активные пользователи (за последние 7 дней)
+        week_ago = datetime.utcnow() - timedelta(days=7)
+        active_users = db.query(User).filter(User.last_interaction >= week_ago).count()
+
+        # Завершённые броски (с выбранным путём)
+        completed_throws = db.query(DiceThrow).filter(DiceThrow.chosen_path.isnot(None)).count()
+
+        # Популярные пути
+        path_stats = db.query(
+            DiceThrow.chosen_path,
+            func.count(DiceThrow.id).label('count')
+        ).filter(
+            DiceThrow.chosen_path.isnot(None)
+        ).group_by(
+            DiceThrow.chosen_path
+        ).all()
+
+        path_distribution = {path: count for path, count in path_stats}
+
+        # Среднее бросков на пользователя
+        avg_throws_per_user = throws_count / users_count if users_count > 0 else 0
+
+        # Конверсия (% завершённых бросков)
+        completion_rate = (completed_throws / throws_count * 100) if throws_count > 0 else 0
+
         return {
             "users": users_count,
-            "throws": throws_count
+            "throws": throws_count,
+            "active_users_7d": active_users,
+            "completed_throws": completed_throws,
+            "completion_rate": round(completion_rate, 1),
+            "avg_throws_per_user": round(avg_throws_per_user, 2),
+            "path_distribution": path_distribution
+        }
+    finally:
+        db.close()
+
+
+def get_detailed_analytics() -> dict:
+    """Получить детальную аналитику"""
+    db = get_db()
+    try:
+        from sqlalchemy import func
+        from datetime import timedelta
+
+        now = datetime.utcnow()
+
+        # Новые пользователи по дням (последние 30 дней)
+        users_by_day = db.query(
+            func.date(User.created_at).label('date'),
+            func.count(User.id).label('count')
+        ).filter(
+            User.created_at >= now - timedelta(days=30)
+        ).group_by(
+            func.date(User.created_at)
+        ).all()
+
+        # Броски по дням (последние 30 дней)
+        throws_by_day = db.query(
+            func.date(DiceThrow.timestamp).label('date'),
+            func.count(DiceThrow.id).label('count')
+        ).filter(
+            DiceThrow.timestamp >= now - timedelta(days=30)
+        ).group_by(
+            func.date(DiceThrow.timestamp)
+        ).all()
+
+        # Retention: сколько пользователей вернулись
+        users_with_multiple_throws = db.query(
+            DiceThrow.user_id,
+            func.count(DiceThrow.id).label('count')
+        ).group_by(
+            DiceThrow.user_id
+        ).having(
+            func.count(DiceThrow.id) > 1
+        ).count()
+
+        total_users = db.query(User).count()
+        retention_rate = (users_with_multiple_throws / total_users * 100) if total_users > 0 else 0
+
+        return {
+            "users_by_day": [{"date": str(date), "count": count} for date, count in users_by_day],
+            "throws_by_day": [{"date": str(date), "count": count} for date, count in throws_by_day],
+            "retention_rate": round(retention_rate, 1),
+            "returning_users": users_with_multiple_throws
         }
     finally:
         db.close()

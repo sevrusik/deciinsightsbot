@@ -25,3 +25,6 @@ DICE_SET = "basic"  # basic / action / adventure
 AI_MODEL = "gpt-3.5-turbo"
 AI_TEMPERATURE = 0.8
 AI_MAX_TOKENS = 500
+
+# Admin settings
+ADMIN_IDS = os.getenv("ADMIN_IDS", "").split(",")  # Telegram IDs через запятую

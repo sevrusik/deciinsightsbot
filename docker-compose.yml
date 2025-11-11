@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  dice-bot:
+    build: .
+    container_name: dice-of-isight-bot
+    restart: unless-stopped
+
+    # Переменные окружения из .env файла
+    env_file:
+      - .env
+
+    # Тома для сохранения данных
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+
+    # Для NAS - без порта, так как используем polling вместо webhook
+    # ports:
+    #   - "10000:10000"
+
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=sqlite:////app/data/dice_bot.db
+      - USE_WEBHOOK=false
+
+    # Логирование
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

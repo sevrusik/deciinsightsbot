@@ -11,6 +11,8 @@ from aiogram.fsm.state import State, StatesGroup
 import logging
 import random
 
+logger = logging.getLogger(__name__)
+
 from config import ADMIN_IDS
 from database import (
     get_or_create_user, update_last_interaction,

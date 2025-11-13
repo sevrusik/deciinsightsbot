@@ -171,7 +171,9 @@ async def cmd_history(message: Message):
 @router.message(Command("stats"))
 async def cmd_stats(message: Message):
     """Команда /stats - статистика бота (только для админа)"""
-    if str(message.from_user.id) not in ADMIN_IDS:
+    user_id_str = str(message.from_user.id)
+    logger.info(f"🔍 /stats вызван пользователем: {user_id_str}, ADMIN_IDS: {ADMIN_IDS}")
+    if user_id_str not in ADMIN_IDS:
         await message.answer("⛔ Эта команда доступна только администратору")
         return
 
